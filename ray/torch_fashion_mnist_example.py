@@ -92,7 +92,6 @@ def train_func(config: Dict):
     batch_size = config["batch_size"]
     lr = config["lr"]
     epochs = config["epochs"]
-    should_checkpoint = config.get("should_checkpoint", True)
 
     worker_batch_size = batch_size // session.get_world_size()
 
@@ -113,14 +112,9 @@ def train_func(config: Dict):
         train_epoch(train_dataloader, model, loss_fn, optimizer)
         test_loss, correct = test_epoch(test_dataloader, model, loss_fn)
         metrics = dict(loss=test_loss, accuracy=correct)
-        if should_checkpoint:
-            with tempfile.TemporaryDirectory() as tempdir:
-                torch.save(model.state_dict(), os.path.join(tempdir, "model.pt"))
-                train.report(metrics, checkpoint=Checkpoint.from_directory(tempdir))
-        else:
-            train.report(metrics)
-
-        #session.report(dict(loss=test_loss, accuracy=correct), checkpoint=checkpoint)
+        with tempfile.TemporaryDirectory() as tempdir:
+            torch.save(model.state_dict(), os.path.join(tempdir, "model.pt"))
+            train.report(metrics, checkpoint=Checkpoint.from_directory(tempdir))
 
 classes = [
     "T-shirt/top",
