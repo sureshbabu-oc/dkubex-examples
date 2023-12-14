@@ -15,6 +15,8 @@ from ray.train import Checkpoint
 from ray.air.config import ScalingConfig, RunConfig
 from ray.air.integrations.mlflow import MLflowLoggerCallback, setup_mlflow
 import mlflow
+from mlflow.tracking import MlflowClient
+
 # Download training data from open datasets.
 training_data = datasets.FashionMNIST(
     root="~/data",
@@ -132,6 +134,7 @@ classes = [
 def train_fashion_mnist(num_workers=2, use_gpu=False):
     device = torch.device('cuda') if use_gpu else torch.device('cpu')
     print(f'Resource-type: {device}')
+    client = MlflowClient()
     import os
     user = os.environ.get("USER", "default")
     cluster = os.environ.get("HOSTNAME", "raycluster").split("-")[0]
@@ -168,6 +171,8 @@ def train_fashion_mnist(num_workers=2, use_gpu=False):
         saved_model_state_dict = torch.load(result.checkpoint.path+'/model.pt', map_location=device)
         model = TorchCheckpoint.from_state_dict(saved_model_state_dict).get_model(NeuralNetwork())
         mlflow.pytorch.log_model(model,f"model", input_example=input_example)
+        experiment_id = client.get_experiment_by_name(name).experiment_id
+        client.set_experiment_tag(experiment_id, "project", f"fm-project-{user}")
         mlflow.end_run()
     print(f"Last result: {result.metrics}")
 
